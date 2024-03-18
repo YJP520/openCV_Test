@@ -36,7 +36,7 @@ cv.destroyAllWindows()              # 释放内存
 ```
 
 #### 测试结果
-![avatar](./Images_md/img_resize_show.png)
+![alt](./Images_md/img_resize_show.png)
 
 ### 2. 图片灰度化
 
@@ -69,7 +69,7 @@ cv.waitKey(0)           # 等待按键
 cv.destroyAllWindows()  # 释放内存
 ```
 #### 测试结果
-![avatar](./Images_md/img_gray_test.png)
+![alt](./Images_md/img_gray_test.png)
 
 ### 尺寸转换
 
@@ -121,7 +121,7 @@ cv.destroyAllWindows()  # 释放内存
   - thickness 圆形轮廓的粗细（如果为正）。负厚度表示要绘制实心圆。
 
 #### 测试结果
-![avatar](./Images_md/img_rec_cir.png)
+![alt](./Images_md/img_rec_cir.png)
 
 ### 人脸检测
 
@@ -195,7 +195,7 @@ cv.destroyAllWindows()  # 释放内存
 ```
 
 #### 测试结果
-![avatar](./Images_md/img_face_check.png)
+![alt](./Images_md/img_face_check.png)
 
 ### 检测多个人脸
 
