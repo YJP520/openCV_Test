@@ -1,5 +1,7 @@
 # ***一些简单的学习记录***
 
+[学习参考博客-CSDN](http://t.csdnimg.cn/xLFnI)
+
 ---
 
 ### 1. 读取图片
@@ -293,20 +295,152 @@ cap.release()
 
 ### 视频捕获
 
+- cap = cv.VideoCapture('G:/1.mp4')
+
+```python
+import cv2 as cv
+ 
+# 检测方法定义
+def face_detect_method(img):
+    grey_img = cv.cvtColor(img,cv.COLOR_BGRA2GRAY)
+    face_detector = cv.CascadeClassifier(
+        "D:\PyCharm\python 3.8.5\Lib\site-packages\cv2/data/haarcascade_frontalface_default.xml")
+    face = face_detector.detectMultiScale(grey_img,1.02,4)
+    for x,y,w,h in face:
+        cv.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
+    cv.imshow("result",img)
+ 
+#读取摄像头
+#cap = cv.VideoCapture(0)
+#读取视频
+cap = cv.VideoCapture('G:/1.mp4')
+ 
+# 循环判断
+while True:
+    flag,frame = cap.read()
+    if not flag:
+        break
+    face_detect_method(frame)
+    if ord('c')==cv.waitKey(1):
+        break
+ 
+cv.destroyAllWindows()
+cap.release()
+```
+
+### 人脸信息录入
+
+- cap.isOpened()
+  - 判断视频是否读取成功，成功读取视频对象返回True
+
+-  cv2.waitKey(1000) & 0xFF == ord('q') 是什么意思
+  - cv2.waitKey(1000) 在1000ms内根据键盘输入返回一个值
+  - 0xFF 一个十六进制数
+  - ord('q') 返回q的ascii码
+
+实际上在linux上使用waitkey有时会出现waitkey返回值超过了（0-255）的范围的现象。通过cv2.waitKey(1) & 0xFF运算，当waitkey返回值正常时 cv2.waitKey(1) = cv2.waitKey(1000) & 0xFF,当返回值不正常时，cv2.waitKey(1000) & 0xFF的范围仍不超过（0-255），就避免了一些奇奇怪怪的BUG。
+
+- 代码实现
+  - 使用电脑自带的摄像头进行人脸的信息捕获，使用num对保存图片进行计数
+  - 使用cap.isOpened()方法来判断摄像头是否开启
+  - 使用frame保存视频中捕获到的帧图像，k获取键盘按键，s代表保存图像，空格代表退出程序
+  - 当按下s键时，使用cv2.imwrite方法对图片进行保存
+
+```python
+import cv2 as cv  # 导入模块
+
+# 读取摄像头
+cap = cv.VideoCapture(0)
+# 记录保存图片的数目
+num = 1
+
+# 当摄像头开启时
+while cap.isOpened():
+    ret, frame = cap.read()
+    cv.imshow("show", frame)
+    # 获取按键
+    k = cv.waitKey(1) & 0xFF
+    # 按下s保存图像
+    if k == ord('s'):
+        cv.imwrite("F:/Projects/Python Pycharm/openCV_Test/Data/" + "People" + str(num) + ".face" + ".jpg", frame)
+        print("successfully saved" + str(num) + ".jpg")
+        print("------------------------------------------")
+        # 计数加一
+        num += 1
+    # 按下空格退出
+    elif k == ord(' '):
+        break
+
+cv.destroyAllWindows()
+cap.release()
+```
+
+### 使用数据训练识别器
+
+- 构建项目结构
+  - data 和 trainer 文件夹
+  - trainer为空文件夹
+  - data文件夹下继续创建jm文件夹，在jm其中放置训练的图片，图片命名方式为：序号.姓名 
+
+- 主要步骤
+  - os.listdir可以获取path中的所有图像文件名
+  - 然后使用os.path.join方法把文件夹路径和图片名进行拼接
+  - 存储在imagePaths列表中，此时列表中存储的就是图片的完整路径，方便下一步open该图片。
+
+- 运行问题
+  - 识别不到cv2模块中的face属性
+    - 使用pip install命令安装opencv-库 [参考博客](http://t.csdnimg.cn/nPVvC)
+
+```python
+import os
+import cv2 as cv
+from PIL import Image
+import numpy as np
 
 
+def getImageAndLabels(path):
+    # 存储人脸数据
+    faceSamples = []
+    # 存储姓名数据
+    ids = []
+    # 储存图片信息
+    imagePaths = [os.path.join(path, f) for f in os.listdir(path)]
+    # 人脸检测分类器
+    face_detector = cv.CascadeClassifier(
+        "D:\PyCharm\python 3.8.5\Lib\site-packages\cv2/data/haarcascade_frontalface_default.xml")
+    # 遍历列表中的图片
+    for imagePath in imagePaths:
+        # 打开图片，灰度化
+        PIL_img = Image.open(imagePath).convert('L')
+        # 把图像转换为数组，
+        img_numpy = np.array(PIL_img, 'uint8')
+        # 获取图片人脸特征
+        faces = face_detector.detectMultiScale(img_numpy)
+        # 获取每张图片的id和姓名
+        id = int(os.path.split(imagePath)[1].split('.')[0])
+        # 预防无面容照片
+        for x, y, w, h in faces:
+            ids.append(id)
+            faceSamples.append(img_numpy[y:y + h, x:x + w])
+
+            # 打印脸部特征和id
+        print('id:', id)
+        print('fs:', faceSamples)
+        return faceSamples, ids
 
 
+if __name__ == '__main__':
+    # 图片路径
+    path = '../Train_Test/data/jm/'
+    # 获取图像数组和id标签数组
+    faces, ids = getImageAndLabels(path)
 
-
-
-
-
-
-
-
-
-
-
+    # 加载识别器
+    recognizer = cv.face.LBPHFaceRecognizer_create()
+    # 训练
+    recognizer.train(faces, np.array(ids))
+    # 保存文件
+    recognizer.write('../Train_Test/trainer/trainer.yml')
+```
 
 
