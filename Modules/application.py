@@ -71,7 +71,7 @@ class Camera_Check:
                 "D:/PyCharm/python 3.8.5/Lib/site-packages/cv2/data/haarcascade_frontalface_default.xml")
             # 使用分类器 获取脸部位置坐标
             face_position = face_detector.detectMultiScale(grey_img, 1.05, 3)
-            if face_position != ():
+            if str(face_position) != str("()"):
                 is_check = True
                 count += 1  # 计数器自增
                 # 位置标记
@@ -80,7 +80,8 @@ class Camera_Check:
                     self.face_x_y.append((x + w / 2, y + h / 2))
                     # 获取坐标 绘制图形 pt1(x, y), pt2(x+w, y+h)
                     # cv.rectangle(img, (x, y), (x + w, y + h), (0, 255, 255), 2)
-                    R_G_B = self.get_randon_RGB()
+                    # R_G_B = self.get_randon_RGB()
+                    R_G_B = 152, 251, 152
                     # cv.rectangle(img, (x, y), (x + w, y + h), R_G_B, 1)
                     # 左上角
                     cv.line(img, (x, y), (x, y + 10), R_G_B, 2)

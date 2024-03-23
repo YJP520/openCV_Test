@@ -464,3 +464,214 @@ if __name__ == '__main__':
   - ❤ color ：线的颜色
   - ❤ thickness ：线的粗细像素
 
+### 多线程测试
+
+- Python提供了thread、threading等模块来进行线程的创建与管理，后者在线程管理能力上更进一步
+
+**创建线程**
+```python
+from threading import Thread, current_thread
+
+def target01(args1, args2):
+	print("这里是{}".format(current_thread().name))
+
+# 创建线程
+thread01 = Thread(target=target01, args="参数", name="线程1")
+# 设置守护线程【可选】
+thread01.setDaemon(True)
+# 启动线程
+thread01.start()
+```
+
+**设置守护线程**
+```python
+from threading import Thread, current_thread
+
+def target01():
+	print("这里是{}".format(current_thread().name))
+
+# 创建线程 设置守护线程
+thread01 = Thread(target=target01, daemon=True)
+# thread01.setDaemon(True)
+# 启动线程
+thread01.start()
+```
+
+**设置线程阻塞**
+```python
+import time
+from threading import Thread, current_thread
+
+
+def target():
+    if current_thread().name == "1":
+        time.sleep(5)
+    else:
+        time.sleep(6)
+    print("线程{}已退出".format(current_thread().name))
+
+
+thread01 = Thread(target=target, daemon=True, name="1")
+thread02 = Thread(target=target, daemon=True, name="2")
+
+thread01.start()
+thread02.start()
+
+print("程序因线程1陷入阻塞")
+thread01.join(timeout=3)
+print("程序因线程2陷入阻塞")
+thread02.join(timeout=3)
+print("主线程已退出")
+```
+
+### 线程之间通信方法
+
+- 线程之间共享一块内存，子线程可以通过指定target来执行一个函数，但是这个函数的返回值是没有办法直接传回主线程的。
+- 使用多线程用于执行一些其他任务，获取子线程的结果十分重要。
+- 使用全局变量虽然可行，但是资源的并发读写会带来线程安全问题。
+
+**线程锁**
+
+- 多个线程对同一份资源进行读写操作时，可以使用线程锁来确保数据安全。
+- python的多种锁：同步锁Lock、递归锁RLock、条件锁Condition、事件锁Event、信号量锁Semaphore
+-  可以通过threading.lock类来创建锁对象，一旦一个线程获得一个锁，会阻塞之后所有尝试获得该锁对象的线程，直到它被重新释放。
+
+```python
+from threading import Thread, Lock
+from time import sleep
+
+book_num = 100  # 图书馆最开始有100本图书
+bookLock = Lock()  # 锁
+
+
+def books_return():  # 还书
+    global book_num
+    while book_num < 105:
+        bookLock.acquire()  # 等待资源使用
+        book_num += 1
+        print("[R] - 归还1本，现有图书{}本".format(book_num))
+        bookLock.release()  # 归还资源
+        sleep(1)  # 模拟事件发生周期
+
+
+def books_lease():  # 借书
+    global book_num
+    while book_num < 105:
+        bookLock.acquire()  # 等待资源使用
+        book_num -= 1
+        print("[L] - 借走1本，现有图书{}本".format(book_num))
+        bookLock.release()  # 归还资源
+        sleep(2)  # 模拟事件发生周期
+
+
+if __name__ == "__main__":
+    thread_lease = Thread(target=books_lease)
+    thread_return = Thread(target=books_return)
+    thread_lease.start()
+    thread_return.start()
+```
+
+### **queue模块(同步队列类)**
+
+- 可以采用Python的queue模块来实现线程通信。Python中的 queue 模块实现了多生产者、多消费者队列，特别适用于在多线程间安全的进行信息交换。
+- 该模块提供了4种我们可以利用的队列容器，分别Queue（先进先出队列）、LifoQueue（先进后出队列）、PriorityQueue（优先级队列）、SimpleQueue（无界的先进先出队列，简单实现，缺少Queue中的任务跟踪等高级功能
+
+```python
+Queue(maxsize=5)  # 创建一个FIFO队列，并制定队列大小，若maxsize被指定为小于等于0，则队列无限大
+
+Queue.qsize() # 返回队列的大致大小，注意并不是确切值，所以不能被用来当做后续线程是否会被阻塞的依据
+
+Queue.empty() # 判断队列为空是否成立，同样不能作为阻塞依据
+
+Queue.full()  # 判断队列为满是否成立，同样不能作为阻塞依据
+
+Queue.put(item, block=True, timeout=None) # 投放元素进入队列，block为True表示如果队列满了投放失败，将阻塞该线程，timeout可用来设置线程阻塞的时间长短（秒）；
+# 注意，如果block为False，如果队列为满，则将直接引发Full异常，timeout将被忽略（在外界用try处理异常即可）
+Queue.put_nowait(item) # 相当于put(item, block=False)
+
+Queue.get(block=True, timeout=False) # 从队列中取出元素，block为False而队列为空时，会引发Empty异常
+Queue.get_nowait() # 相当于get(block=False)
+
+Queue.task_done() # 每个线程使用get方法从队列中获取一个元素，该线程通过调用task_done()表示该元素已处理完成。
+
+Queue.join() # 阻塞至队列中所有元素都被处理完成，即队列中所有元素都已被接收，且接收线程全已调用task_done()。
+
+```
+
+**示例**
+```python
+import queue
+from random import choice  # Choose a random element from a non-empty sequence.
+from threading import Thread
+
+q = queue.Queue(maxsize=5)
+dealList = ["红烧猪蹄", "卤鸡爪", "酸菜鱼", "糖醋里脊", "九转大肠", "阳春面", "烤鸭", "烧鸡", "剁椒鱼头", "酸汤肥牛", "炖羊肉"]
+
+
+def cooking(chef_name: str):
+    for i in range(4):
+        deal = choice(dealList)
+        q.put(deal, block=True)
+        print("厨师{}给大家带来一道：{}  ".format(chef_name, deal))
+
+
+def eating(cust_name: str):
+    for i in range(3):
+        deal = q.get(block=True)
+        print("顾客{}吃掉了：{}  ".format(cust_name, deal))
+        q.task_done()
+
+
+if __name__ == "__main__":
+    # 创建并启动厨师ABC线程，创建并启动顾客1234线程
+    thread_list_chef = [Thread(target=cooking, args=chef_name).start() for chef_name in ["A", "B", "C"]]
+    thread_list_cust = [Thread(target=eating, args=str(cust_name)).start() for cust_name in range(4)]
+    # 队列阻塞，直到所有线程对每个元素都调用了task_done
+    q.join()
+```
+
+### 杀死线程
+
+- 在一些场景下，我们可能需要杀死某个线程，但是在这之前，请仔细的考量代码的上下文环境。
+- 强制杀死线程可能会带来一些意想不到的结果，并且从程序设计来讲，这本身就是不合理的。
+- 而且，锁资源并不会因为当前线程的退出而释放，这在程序运行过程中，可能会成为典型的死锁场景。所以杀死线程之前，请一定慎重。
+
+
+可以用全局变量给出一个flag，线程任务采用循环形式进行，每次循环都会检查该flag，外界可以通过修改这一flag来通知这一线程退出循环，结束任务，从而起到杀死线程的目的，但请注意，为了线程安全，退出前一定要释放这一线程所占用的资源。
+```python
+import time
+from threading import Lock, Thread
+from time import sleep
+
+flag = True
+lock = Lock()
+book_num = 100
+
+
+def tar():
+    global flag, lock, book_num
+    while True:
+        lock.acquire()
+        # 线程任务逻辑
+        if flag is False:
+            break
+        print("book={}, and add 1.".format(book_num))
+        book_num += 1
+        time.sleep(0.5)
+        lock.release()
+    lock.release()
+
+
+if __name__ == "__main__":
+    thread = Thread(target=tar)
+    thread.start()
+    print("\n3秒后线程会被杀死")
+    sleep(3)
+    flag = False
+    print("线程已被杀死")
+```
+
+
+
+
+
